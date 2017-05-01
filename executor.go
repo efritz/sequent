@@ -9,6 +9,8 @@ import (
 )
 
 type (
+	// Executor abstracts a sequence of tasks which are processed, in order, in a
+	// background goroutine. New tasks can be scheduled in a non-blocking manner.
 	Executor struct {
 		backoff backoff.Backoff
 		buffer  []Task
@@ -19,6 +21,7 @@ type (
 		ready   chan struct{}
 	}
 
+	// Task is a function that returns true on success and false on failure.
 	Task func() bool
 )
 
