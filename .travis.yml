@@ -1,0 +1,15 @@
+language: go
+
+go:
+    - 1.7
+    - tip
+
+script:
+    - go test -coverprofile=coverage.txt -covermode=atomic
+
+after_success:
+    - bash <(curl -s https://codecov.io/bash)
+
+addons:
+    code_climate:
+        repo_token: ff268088ed840f91335b33ad201b18a1cad6cb626797aabf5147ecc402e1ed35
