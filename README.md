@@ -13,7 +13,42 @@ until success based on a given backoff strategy.
 
 ## Example
 
-**TODO**
+First, create an `Executor`. The alternate constructor, `NewExecutorWithBackoff`
+creates an executor instance with a non-default backoff strategy. The default 
+strategy is an exponential strategy with some random jitter. Before scheduling
+a task, the executor must be started, which will begin processing the work queue
+in a goroutine.
+
+```go
+executor := NewExecutor()
+executor.Start()
+```
+
+Tasks can then be scheduled via the `Schedule` method. A task should be a method
+that returns true on success and false on failure. Each task is executed in the
+order that it was scheduled; task *n* will not begin until task *n-1* has already
+successfully finished.
+
+```go
+executor.Signal(func() bool {
+    if ok := /* re-execute failed redis command */; ok {
+        return true
+    }
+    
+    fmt.Printf("Redis is still down.\n")
+    return false
+})
+```
+
+The user is also responsible for stopping the executor, which can be done by the
+following two methods. Use the `Stop` method if the executor should abandon the
+current task and ignore any queued tasks which have not yet been invoked. Use the
+`Flush` method instead to wait for all queued tasks to finish processing.
+
+```go
+executor.Stop()  // immediate shutdown
+executor.Flush() // graceful shutdown
+```
 
 ## License
 
