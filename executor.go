@@ -35,7 +35,7 @@ func NewExecutor() *Executor {
 	))
 }
 
-// NewExecutorWithbackoff creates a new Executor with the given backoff strategy.
+// NewExecutorWithBackoff creates a new Executor with the given backoff strategy.
 func NewExecutorWithBackoff(backoff backoff.Backoff) *Executor {
 	return &Executor{
 		backoff: backoff,
