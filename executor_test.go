@@ -15,7 +15,7 @@ func (s *ExecutorSuite) TestSchedule(t *testing.T) {
 	var (
 		c = make(chan int)
 		r = make(chan int, 4)
-		e = NewExecutorWithBackoff(testBackoff)
+		e = NewExecutor(WithBackoff(testBackoff))
 	)
 
 	defer close(r)
@@ -39,7 +39,7 @@ func (s *ExecutorSuite) TestRetry(t *testing.T) {
 		i = 0
 		j = 0
 		r = make(chan int)
-		e = NewExecutorWithBackoff(testBackoff)
+		e = NewExecutor(WithBackoff(testBackoff))
 	)
 
 	e.Start()
@@ -63,7 +63,7 @@ func (s *ExecutorSuite) TestRetry(t *testing.T) {
 func (s *ExecutorSuite) TestStop(t *testing.T) {
 	var (
 		r = make(chan int)
-		e = NewExecutorWithBackoff(testBackoff)
+		e = NewExecutor(WithBackoff(testBackoff))
 	)
 
 	defer close(r)

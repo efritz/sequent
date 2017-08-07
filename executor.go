@@ -11,7 +11,29 @@ import (
 type (
 	// Executor abstracts a sequence of tasks which are processed, in order, in a
 	// background goroutine. New tasks can be scheduled in a non-blocking manner.
-	Executor struct {
+	Executor interface {
+		// Start will begin processing scheduled tasks. This method must not block.
+		Start()
+
+		// Schedule will put a task at the end of the processing queue. This method
+		// will block if Start has not been called, and must not be called after a
+		// call to Stop or Flush.
+		Schedule(task Task)
+
+		// Stop immediately drops the current task and exit the processing loop. This
+		// method does not attempt to interrupt the currently running task, but its
+		// return value will be ignored by the calling function.
+		Stop()
+
+		// Flush blocks until the queue has been completely processed. This method is
+		// the graceful version of Stop.
+		Flush()
+	}
+
+	// Task is a function that returns true on success and false on failure.
+	Task func() bool
+
+	executor struct {
 		backoff backoff.Backoff
 		buffer  []Task
 		mutex   *sync.Mutex
@@ -21,23 +43,19 @@ type (
 		ready   chan struct{}
 	}
 
-	// Task is a function that returns true on success and false on failure.
-	Task func() bool
+	ExecutorConfig func(*executor)
 )
 
-// NewExecutor creates a new Executor with a default exponential backoff strategy.
-func NewExecutor() *Executor {
-	return NewExecutorWithBackoff(backoff.NewExponentialBackoff(
+// NewExecutor creates a new Executor.
+func NewExecutor(configs ...ExecutorConfig) Executor {
+	backoff := backoff.NewExponentialBackoff(
 		2,
 		0.25,
 		10*time.Millisecond,
 		30*time.Second,
-	))
-}
+	)
 
-// NewExecutorWithBackoff creates a new Executor with the given backoff strategy.
-func NewExecutorWithBackoff(backoff backoff.Backoff) *Executor {
-	return &Executor{
+	executor := &executor{
 		backoff: backoff,
 		buffer:  []Task{},
 		mutex:   &sync.Mutex{},
@@ -46,41 +64,42 @@ func NewExecutorWithBackoff(backoff backoff.Backoff) *Executor {
 		done:    make(chan struct{}),
 		ready:   make(chan struct{}, 1),
 	}
+
+	for _, config := range configs {
+		config(executor)
+	}
+
+	return executor
 }
 
-// Start will begin processing scheduled tasks. This method does not block.
-func (e *Executor) Start() {
+// WithBackoff creates an ExecutorConfig which overrides the default backoff.
+func WithBackoff(backoff backoff.Backoff) ExecutorConfig {
+	return func(e *executor) {
+		e.backoff = backoff
+	}
+}
+
+func (e *executor) Start() {
 	go e.queue()
 	go e.process()
 }
 
-// Schedule will put a task at the end of the processing queue. This method
-// will block if Start has not been called, and must not be called after a
-// call to Stop or Flush.
-func (e *Executor) Schedule(task Task) {
+func (e *executor) Schedule(task Task) {
 	e.tasks <- task
 }
 
-// Stop immediately drops the current task and exit the processing loop. This
-// method does not attempt to interrupt the currently running task, but its
-// return value will be ignored by the calling function.
-func (e *Executor) Stop() {
+func (e *executor) Stop() {
 	close(e.halt)
 	close(e.tasks)
 }
 
-// Flush blocks until the queue has been completely processed. This method is
-// the graceful version of Stop.
-func (e *Executor) Flush() {
+func (e *executor) Flush() {
 	close(e.tasks)
 	<-e.done
 	close(e.halt)
 }
 
-//
-// Background routines
-
-func (e *Executor) queue() {
+func (e *executor) queue() {
 	defer close(e.ready)
 
 	// Put each task we get from calls to Schedule onto a
@@ -96,7 +115,7 @@ func (e *Executor) queue() {
 	}
 }
 
-func (e *Executor) process() {
+func (e *executor) process() {
 	// Close this channel once this goroutine exits so that
 	// flush has something to synchronize on.
 	defer close(e.done)
@@ -135,16 +154,13 @@ outer:
 	}
 }
 
-//
-// Queueing primitives
-
-func (e *Executor) push(task Task) {
+func (e *executor) push(task Task) {
 	e.mutex.Lock()
 	e.buffer = append(e.buffer, task)
 	e.mutex.Unlock()
 }
 
-func (e *Executor) pop() (Task, bool) {
+func (e *executor) pop() (Task, bool) {
 	e.mutex.Lock()
 	defer e.mutex.Unlock()
 
@@ -155,27 +171,4 @@ func (e *Executor) pop() (Task, bool) {
 	var task Task
 	task, e.buffer = e.buffer[0], e.buffer[1:]
 	return task, true
-}
-
-//
-// Channel helpers
-
-func blockOnSignal(halt <-chan struct{}, ready <-chan struct{}) bool {
-	select {
-	case <-halt:
-		return false
-
-	case _, ok := <-ready:
-		return ok
-	}
-}
-
-func isClosed(ch <-chan struct{}) bool {
-	select {
-	case <-ch:
-		return true
-
-	default:
-		return false
-	}
 }
