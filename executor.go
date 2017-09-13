@@ -1,6 +1,7 @@
 package sequent
 
 import (
+	"context"
 	"sync"
 	"time"
 
@@ -48,10 +49,8 @@ type (
 )
 
 // NewExecutor creates a new Executor.
-func NewExecutor(configs ...ExecutorConfig) Executor {
+func NewExecutor(configs ...ConfigFunc) Executor {
 	backoff := backoff.NewExponentialBackoff(
-		2,
-		0.25,
 		10*time.Millisecond,
 		30*time.Second,
 	)
@@ -145,15 +144,27 @@ outer:
 				continue outer
 			}
 
-			watchdog.BlockUntilSuccessOrQuit(
-				watchdog.RetryFunc(task),
-				e.backoff,
-				e.halt,
-			)
+			e.call(task)
 		}
 
 		return
 	}
+}
+
+func (e *executor) call(task Task) {
+	// Create a context that is canceled when a value is received
+	// on the halt channel (and, to clean up, when the watcher is
+	// finished - this can be called twice without issue).
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go func() {
+		defer cancel()
+		<-e.halt
+	}()
+
+	watchdog.BlockUntilSuccess(watchdog.RetryFunc(task), e.backoff, ctx)
 }
 
 func (e *executor) push(task Task) {
