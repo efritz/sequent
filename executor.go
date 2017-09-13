@@ -43,7 +43,8 @@ type (
 		ready   chan struct{}
 	}
 
-	ExecutorConfig func(*executor)
+	// ConfigFunc is a function used to initialize a new executor.
+	ConfigFunc func(*executor)
 )
 
 // NewExecutor creates a new Executor.
@@ -72,8 +73,9 @@ func NewExecutor(configs ...ExecutorConfig) Executor {
 	return executor
 }
 
-// WithBackoff creates an ExecutorConfig which overrides the default backoff.
-func WithBackoff(backoff backoff.Backoff) ExecutorConfig {
+// WithBackoff sets the backoff strategy to use (default is
+// an exponential strategy with a maximum of 30 seconds).
+func WithBackoff(backoff backoff.Backoff) ConfigFunc {
 	return func(e *executor) {
 		e.backoff = backoff
 	}
