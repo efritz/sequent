@@ -37,7 +37,7 @@ type (
 	executor struct {
 		backoff backoff.Backoff
 		buffer  []Task
-		mutex   *sync.Mutex
+		mutex   sync.Mutex
 		tasks   chan Task
 		halt    chan struct{}
 		done    chan struct{}
@@ -58,7 +58,6 @@ func NewExecutor(configs ...ConfigFunc) Executor {
 	executor := &executor{
 		backoff: backoff,
 		buffer:  []Task{},
-		mutex:   &sync.Mutex{},
 		tasks:   make(chan Task),
 		halt:    make(chan struct{}),
 		done:    make(chan struct{}),
