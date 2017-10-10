@@ -163,7 +163,7 @@ func (e *executor) call(task Task) {
 		<-e.halt
 	}()
 
-	watchdog.BlockUntilSuccess(watchdog.RetryFunc(task), e.backoff, ctx)
+	watchdog.BlockUntilSuccess(ctx, watchdog.RetryFunc(task), e.backoff)
 }
 
 func (e *executor) push(task Task) {
