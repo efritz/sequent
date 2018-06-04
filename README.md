@@ -2,19 +2,19 @@
 
 [![GoDoc](https://godoc.org/github.com/efritz/sequent?status.svg)](https://godoc.org/github.com/efritz/sequent)
 [![Build Status](https://secure.travis-ci.org/efritz/sequent.png)](http://travis-ci.org/efritz/sequent)
-[![Code Coverage](http://codecov.io/github/efritz/sequent/coverage.svg?branch=master)](http://codecov.io/github/efritz/sequent?branch=master)
-[![Go Report Card](https://goreportcard.com/badge/github.com/efritz/sequent)](https://goreportcard.com/report/github.com/efritz/sequent)
+[![Maintainability](https://api.codeclimate.com/v1/badges/14c3653af6e890607d74/maintainability)](https://codeclimate.com/github/efritz/sequent/maintainability)
+[![Test Coverage](https://api.codeclimate.com/v1/badges/14c3653af6e890607d74/test_coverage)](https://codeclimate.com/github/efritz/sequent/test_coverage)
 
 Go library for sequential background processing.
 
-This library depends on the [watchdog](http://github.com/efritz/watchdog) and 
-[backoff](https://github.com/efritz/backoff) libraries, which will reinvoke methods 
+This library depends on the [watchdog](http://github.com/efritz/watchdog) and
+[backoff](https://github.com/efritz/backoff) libraries, which will reinvoke methods
 until success based on a given backoff strategy.
 
 ## Example
 
 First, create an `Executor`. The alternate constructor, `NewExecutorWithBackoff`
-creates an executor instance with a non-default backoff strategy. The default 
+creates an executor instance with a non-default backoff strategy. The default
 strategy is an exponential strategy with some random jitter. Before scheduling
 a task, the executor must be started, which will begin processing the work queue
 in a goroutine.
@@ -34,7 +34,7 @@ executor.Signal(func() bool {
     if ok := /* re-execute failed redis command */; ok {
         return true
     }
-    
+
     fmt.Printf("Redis is still down.\n")
     return false
 })
