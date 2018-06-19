@@ -42,6 +42,7 @@ type (
 		halt    chan struct{}
 		done    chan struct{}
 		ready   chan struct{}
+		once    *sync.Once
 	}
 
 	// ConfigFunc is a function used to initialize a new executor.
@@ -62,6 +63,7 @@ func NewExecutor(configs ...ConfigFunc) Executor {
 		halt:    make(chan struct{}),
 		done:    make(chan struct{}),
 		ready:   make(chan struct{}, 1),
+		once:    &sync.Once{},
 	}
 
 	for _, config := range configs {
@@ -89,8 +91,10 @@ func (e *executor) Schedule(task Task) {
 }
 
 func (e *executor) Stop() {
-	close(e.halt)
-	close(e.tasks)
+	e.once.Do(func() {
+		close(e.halt)
+		close(e.tasks)
+	})
 }
 
 func (e *executor) Flush() {
